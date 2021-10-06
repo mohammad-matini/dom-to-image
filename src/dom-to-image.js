@@ -11,7 +11,9 @@
         // Default is to fail on error, no placeholder
         imagePlaceholder: undefined,
         // Default cache bust is false, it will use the cache
-        cacheBust: false
+        cacheBust: false,
+        // Default uses browser cache if possible.
+        cacheDisable: false
     };
 
     var domtoimage = {
@@ -48,6 +50,7 @@
                 defaults to 1.0.
      * @param {String} options.imagePlaceholder - dataURL to use as a placeholder for failed images, default behaviour is to fail fast on images we can't fetch
      * @param {Boolean} options.cacheBust - set to true to cache bust by appending the time to the request url
+     * @param {Boolean} options.cacheDisable - set to true to disable HTTP caching using Cache-Control and Pragma set to no-store
      * @return {Promise} - A promise that is fulfilled with a SVG image data URL
      * */
     function toSvg(node, options) {
@@ -146,6 +149,12 @@
             domtoimage.impl.options.cacheBust = defaultOptions.cacheBust;
         } else {
             domtoimage.impl.options.cacheBust = options.cacheBust;
+        }
+
+        if(typeof(options.cacheDisable) === 'undefined') {
+            domtoimage.impl.options.cacheDisable = defaultOptions.cacheDisable;
+        } else {
+            domtoimage.impl.options.cacheDisable = options.cacheDisable;
         }
     }
 
@@ -476,6 +485,13 @@
                 request.responseType = 'blob';
                 request.timeout = TIMEOUT;
                 request.open('GET', url, true);
+                if(domtoimage.impl.options.cacheDisable) {
+                    // Cache bypass so we dont have CORS issues with cached images
+                    // Simple busting with query parameters does not work with
+                    // servers that refuse irrelevant query parameters.
+                    request.setRequestHeader('Cache-Control', 'no-cache');
+                    request.setRequestHeader('Pragma', 'no-cache');
+                }
                 request.send();
 
                 var placeholder;
